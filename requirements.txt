@@ -1,0 +1,4 @@
+uiautomation>=2.0.29
+opencv-python>=4.13.0.92
+imagehash>=4.3.2
+rapidocr_onnxruntime>=1.4.4

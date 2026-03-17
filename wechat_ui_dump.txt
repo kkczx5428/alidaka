@@ -1,0 +1,2 @@
+WindowControl | Name='微信' | Class='Qt51514QWindowIcon' | Rect=(124,108,1242,917)
+  PaneControl | Name='Weixin' | Class='Qt51514QWindowIcon' | Rect=(1232,907,1233,908)
