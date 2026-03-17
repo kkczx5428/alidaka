@@ -9,12 +9,13 @@
 <body>
   <div class="page-shell">
     <header class="hero">
-      <div>
-        <p class="eyebrow">Attendance + Performance</p>
+      <div class="hero-copy-block">
+        <p class="eyebrow">Attendance + Performance Cloud</p>
         <h1>出勤业绩整合系统</h1>
         <p class="hero-copy">
-          把出勤打卡表和业绩统计表统一到一个页面里，按日期和姓名自动关联，减少重复统计。
+          把出勤打卡表、业绩统计表和团队目标统一到一个页面里，按日期和姓名自动关联，并支持 Supabase 云端同步。
         </p>
+        <div id="saveStatus" class="save-status" data-state="idle">自动保存已开启</div>
       </div>
       <div class="hero-actions">
         <button id="exportExcelBtn">导出Excel</button>
@@ -25,6 +26,33 @@
       </div>
     </header>
 
+    <section class="card panel auth-panel">
+      <div class="panel-head">
+        <div>
+          <h2>云端同步</h2>
+          <p>使用 Supabase 账号登录后，页面会自动把数据同步到云端，并在多个设备间保持一致。</p>
+        </div>
+        <div id="cloudBadge" class="cloud-badge cloud-idle">本地模式</div>
+      </div>
+
+      <div class="auth-grid">
+        <div class="auth-summary">
+          <p id="authSummary">当前未连接 Supabase，数据仅保存在当前浏览器。</p>
+          <p id="authStatus" class="auth-status">配置完成后，可直接用邮箱和密码登录。</p>
+        </div>
+
+        <div class="auth-form">
+          <input id="authEmail" type="email" placeholder="邮箱账号" autocomplete="email" />
+          <input id="authPassword" type="password" placeholder="登录密码" autocomplete="current-password" />
+          <div class="auth-actions">
+            <button id="signInBtn" type="button">登录云端</button>
+            <button id="signUpBtn" type="button" class="secondary">注册账号</button>
+            <button id="signOutBtn" type="button" class="danger hidden">退出登录</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="toolbar card">
       <div class="toolbar-item">
         <label for="dateInput">日期</label>
@@ -34,7 +62,7 @@
         <label for="teamFilter">团队</label>
         <select id="teamFilter"></select>
       </div>
-      <div class="toolbar-item toolbar-wide">
+      <div class="toolbar-item">
         <label for="quickSearch">姓名搜索</label>
         <input id="quickSearch" type="search" placeholder="输入姓名快速筛选" />
       </div>
@@ -63,7 +91,7 @@
       <div class="panel-head">
         <div>
           <h2>团队分组汇总</h2>
-          <p>按地推团队自动分组，查看每个团队当天出勤、今日产出和月度达成。</p>
+          <p>按地推团队自动分组，查看每个团队的成员、团队长、设备铺设目标和达成情况。</p>
         </div>
       </div>
       <div id="teamBoard" class="team-board"></div>
@@ -107,15 +135,15 @@
         <div class="panel-head">
           <div>
             <h2>员工档案</h2>
-            <p>维护 BD 所属团队、日目标和月目标。</p>
+            <p>维护 BD 所属团队、个人日目标和月目标。</p>
           </div>
         </div>
 
         <form id="employeeForm" class="inline-form">
           <input id="employeeName" type="text" placeholder="姓名" required />
           <select id="employeeTeam" required></select>
-          <input id="employeeDailyTarget" type="number" min="0" step="1" placeholder="日目标" required />
-          <input id="employeeMonthlyTarget" type="number" min="0" step="1" placeholder="月目标" required />
+          <input id="employeeDailyTarget" type="number" min="0" step="1" placeholder="个人日目标" required />
+          <input id="employeeMonthlyTarget" type="number" min="0" step="1" placeholder="个人月目标" required />
           <button type="submit">新增员工</button>
         </form>
 
@@ -156,7 +184,7 @@
         <div class="panel-head">
           <div>
             <h2>业绩录入</h2>
-            <p>录入 N5 派单和自拓，今日量、完成率和月度数据自动计算。</p>
+            <p>录入 N5 派单和自拓，系统自动计算今日量、日完成率和月度完成率。</p>
           </div>
         </div>
 
@@ -173,7 +201,7 @@
                 <th>当月派单总量</th>
                 <th>当月自拓总量</th>
                 <th>当月达成</th>
-                <th>月度目标</th>
+                <th>个人月目标</th>
                 <th>月度完成率</th>
               </tr>
             </thead>
@@ -186,7 +214,7 @@
         <div class="panel-head">
           <div>
             <h2>整合看板</h2>
-            <p>把当日出勤和业绩合并查看，方便做日汇总和月跟进。</p>
+            <p>把当日出勤、个人业绩和团队设备铺设目标合并查看，方便做日汇总和月跟进。</p>
           </div>
         </div>
 
@@ -215,6 +243,8 @@
   </div>
 
   <script src="./vendor/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase.config.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
