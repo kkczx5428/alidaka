@@ -1,5 +1,5 @@
 const STORAGE_KEY = "attendance-performance-system/v3";
-const TIME_SLOTS = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+const TIME_SLOTS = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
 const SUPABASE_TABLE = "app_states";
 const SAVE_DEBOUNCE_MS = 300;
 
