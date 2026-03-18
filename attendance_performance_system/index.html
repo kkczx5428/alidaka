@@ -140,11 +140,11 @@
         </div>
 
         <form id="employeeForm" class="inline-form">
+          <input id="employeeEditingId" type="hidden" />
           <input id="employeeName" type="text" placeholder="姓名" required />
           <select id="employeeTeam" required></select>
-          <input id="employeeDailyTarget" type="number" min="0" step="1" placeholder="个人日目标" required />
           <input id="employeeMonthlyTarget" type="number" min="0" step="1" placeholder="个人月目标" required />
-          <button type="submit">新增员工</button>
+          <button id="employeeSubmitBtn" type="submit">新增员工</button>
         </form>
 
         <div class="table-wrap compact-table">
@@ -153,7 +153,6 @@
               <tr>
                 <th>姓名</th>
                 <th>团队</th>
-                <th>日目标</th>
                 <th>月目标</th>
                 <th>操作</th>
               </tr>

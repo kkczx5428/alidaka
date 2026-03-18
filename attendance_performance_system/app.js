@@ -16,10 +16,11 @@ const els = {
   teamSubmitBtn: document.getElementById("teamSubmitBtn"),
   teamTableBody: document.getElementById("teamTableBody"),
   employeeForm: document.getElementById("employeeForm"),
+  employeeEditingId: document.getElementById("employeeEditingId"),
   employeeName: document.getElementById("employeeName"),
   employeeTeam: document.getElementById("employeeTeam"),
-  employeeDailyTarget: document.getElementById("employeeDailyTarget"),
   employeeMonthlyTarget: document.getElementById("employeeMonthlyTarget"),
+  employeeSubmitBtn: document.getElementById("employeeSubmitBtn"),
   employeeTableBody: document.getElementById("employeeTableBody"),
   attendanceHead: document.getElementById("attendanceHead"),
   attendanceBody: document.getElementById("attendanceBody"),
@@ -319,6 +320,10 @@ function getTeamProfile(teamName) {
   };
 }
 
+function getEmployeeProfile(employeeName) {
+  return state.employees.find((employee) => employee.name === employeeName) ?? null;
+}
+
 function ensureDailyAttendance(dateKey, employeeName) {
   state.attendance[dateKey] ??= {};
   state.attendance[dateKey][employeeName] ??= {};
@@ -332,9 +337,14 @@ function ensureDailyAttendance(dateKey, employeeName) {
 
 function ensureDailyPerformance(dateKey, employeeName) {
   state.performance[dateKey] ??= {};
-  state.performance[dateKey][employeeName] ??= { assigned: 0, selfDeveloped: 0 };
+  state.performance[dateKey][employeeName] ??= {
+    assigned: 0,
+    selfDeveloped: 0,
+    dailyTarget: Number(getEmployeeProfile(employeeName)?.dailyTarget || 0),
+  };
   state.performance[dateKey][employeeName].assigned ??= 0;
   state.performance[dateKey][employeeName].selfDeveloped ??= 0;
+  state.performance[dateKey][employeeName].dailyTarget ??= Number(getEmployeeProfile(employeeName)?.dailyTarget || 0);
   return state.performance[dateKey][employeeName];
 }
 
@@ -424,13 +434,15 @@ function getEmployeeMetrics(dateKey, employee) {
   const attendanceCount = calculateAttendanceCount(dateKey, employee.name);
   const daily = ensureDailyPerformance(dateKey, employee.name);
   const todayAmount = Number(daily.assigned || 0) + Number(daily.selfDeveloped || 0);
-  const dailyRatio = employee.dailyTarget ? todayAmount / employee.dailyTarget : 0;
+  const dailyTarget = Number(daily.dailyTarget || 0);
+  const dailyRatio = dailyTarget ? todayAmount / dailyTarget : 0;
   const monthly = calculateMonthlyPerformance(dateKey, employee.name);
   const monthlyRatio = employee.monthlyTarget ? monthly.achieved / employee.monthlyTarget : 0;
 
   return {
     attendanceCount,
     daily,
+    dailyTarget,
     todayAmount,
     dailyRatio,
     monthly,
@@ -542,21 +554,23 @@ function renderEmployees() {
   const teamGroups = groupEmployeesByTeam(getFilteredEmployees());
 
   if (!teamGroups.length) {
-    els.employeeTableBody.innerHTML = '<tr class="empty-row"><td colspan="5">当前筛选条件下没有员工。</td></tr>';
+    els.employeeTableBody.innerHTML = '<tr class="empty-row"><td colspan="4">当前筛选条件下没有员工。</td></tr>';
     return;
   }
 
   els.employeeTableBody.innerHTML = teamGroups
     .flatMap(({ team, members }) => [
-      `<tr class="group-row"><td colspan="5">${team} · 共 ${members.length} 人 · 团队长 ${getTeamProfile(team).leader || "-"}</td></tr>`,
+      `<tr class="group-row"><td colspan="4">${team} · 共 ${members.length} 人 · 团队长 ${getTeamProfile(team).leader || "-"}</td></tr>`,
       ...members.map(
         (employee) => `
           <tr>
             <td>${employee.name}</td>
             <td>${employee.team}</td>
-            <td>${employee.dailyTarget}</td>
             <td>${employee.monthlyTarget}</td>
-            <td><button class="tiny-button danger" data-action="delete-employee" data-id="${employee.id}">删除</button></td>
+            <td>
+              <button class="tiny-button secondary" data-action="edit-employee" data-id="${employee.id}">编辑</button>
+              <button class="tiny-button danger" data-action="delete-employee" data-id="${employee.id}">删除</button>
+            </td>
           </tr>
         `,
       ),
@@ -634,7 +648,7 @@ function renderPerformance() {
       const subtotalRow = `<tr class="group-row"><td colspan="11">${team} · 团队长 ${teamTotals.teamProfile?.leader || "-"} · 日设备目标 ${teamTotals.dailyDeviceTarget} · 今日量 ${teamTotals.todayAmount} · 日完成率 ${percent(teamTotals.dailyDeviceCompletion)} · 月设备目标 ${teamTotals.monthlyDeviceTarget} · 月完成率 ${percent(teamTotals.monthlyDeviceCompletion)}</td></tr>`;
 
       const memberRows = members.map((employee) => {
-        const { daily, todayAmount, dailyRatio, monthly, monthlyRatio } = getEmployeeMetrics(dateKey, employee);
+        const { daily, dailyTarget, todayAmount, dailyRatio, monthly, monthlyRatio } = getEmployeeMetrics(dateKey, employee);
 
         return `
           <tr>
@@ -642,7 +656,7 @@ function renderPerformance() {
             <td><input type="number" min="0" step="1" data-action="performance-input" data-field="assigned" data-name="${employee.name}" value="${daily.assigned}" /></td>
             <td><input type="number" min="0" step="1" data-action="performance-input" data-field="selfDeveloped" data-name="${employee.name}" value="${daily.selfDeveloped}" /></td>
             <td>${todayAmount}</td>
-            <td>${employee.dailyTarget}</td>
+            <td><input type="number" min="0" step="1" data-action="performance-input" data-field="dailyTarget" data-name="${employee.name}" value="${dailyTarget}" /></td>
             <td class="${getCompletionClass(dailyRatio)}">${percent(dailyRatio)}</td>
             <td>${monthly.assigned}</td>
             <td>${monthly.selfDeveloped}</td>
@@ -705,7 +719,7 @@ function renderSummary() {
           <td>${employee.name}</td>
           <td>${metrics.attendanceCount}</td>
           <td>${metrics.todayAmount}</td>
-          <td>${employee.dailyTarget}</td>
+          <td>${metrics.dailyTarget}</td>
           <td class="${getCompletionClass(metrics.dailyRatio)}">${percent(metrics.dailyRatio)}</td>
           <td>${metrics.monthly.achieved}</td>
           <td>${employee.monthlyTarget}</td>
@@ -781,6 +795,12 @@ function resetTeamForm() {
   els.teamSubmitBtn.textContent = "新增团队";
 }
 
+function resetEmployeeForm() {
+  els.employeeForm.reset();
+  els.employeeEditingId.value = "";
+  els.employeeSubmitBtn.textContent = "新增员工";
+}
+
 function addTeam(event) {
   event.preventDefault();
   const editingId = els.teamEditingId.value;
@@ -839,29 +859,60 @@ function addTeam(event) {
 
 function addEmployee(event) {
   event.preventDefault();
+  const editingId = els.employeeEditingId.value;
   const name = els.employeeName.value.trim();
   const team = els.employeeTeam.value.trim();
-  const dailyTarget = Number(els.employeeDailyTarget.value);
   const monthlyTarget = Number(els.employeeMonthlyTarget.value);
 
   if (!name || !team) {
     return;
   }
 
-  if (state.employees.some((employee) => employee.name === name)) {
-    alert("该员工已存在，请勿重复创建。");
+  const duplicate = state.employees.find((employee) => employee.name === name && employee.id !== editingId);
+  if (duplicate) {
+    alert("该员工姓名已存在，请换一个姓名或直接编辑原员工。");
     return;
   }
 
-  state.employees.push({
-    id: createId(),
-    name,
-    team,
-    dailyTarget,
-    monthlyTarget,
-  });
+  if (editingId) {
+    const previous = state.employees.find((employee) => employee.id === editingId);
+    state.employees = state.employees.map((employee) =>
+      employee.id === editingId
+        ? {
+            ...employee,
+            name,
+            team,
+            monthlyTarget,
+          }
+        : employee,
+    );
 
-  els.employeeForm.reset();
+    if (previous && previous.name !== name) {
+      for (const records of Object.values(state.attendance)) {
+        if (records[previous.name]) {
+          records[name] = records[previous.name];
+          delete records[previous.name];
+        }
+      }
+
+      for (const records of Object.values(state.performance)) {
+        if (records[previous.name]) {
+          records[name] = records[previous.name];
+          delete records[previous.name];
+        }
+      }
+    }
+  } else {
+    state.employees.push({
+      id: createId(),
+      name,
+      team,
+      dailyTarget: 0,
+      monthlyTarget,
+    });
+  }
+
+  resetEmployeeForm();
   syncAfterChange();
 }
 
@@ -877,6 +928,19 @@ function startEditTeam(teamId) {
   els.teamDailyDeviceTarget.value = String(team.dailyDeviceTarget);
   els.teamMonthlyDeviceTarget.value = String(team.monthlyDeviceTarget);
   els.teamSubmitBtn.textContent = "保存团队";
+}
+
+function startEditEmployee(employeeId) {
+  const employee = state.employees.find((item) => item.id === employeeId);
+  if (!employee) {
+    return;
+  }
+
+  els.employeeEditingId.value = employee.id;
+  els.employeeName.value = employee.name;
+  els.employeeTeam.value = employee.team;
+  els.employeeMonthlyTarget.value = String(employee.monthlyTarget);
+  els.employeeSubmitBtn.textContent = "保存员工";
 }
 
 function deleteTeam(teamId) {
@@ -921,6 +985,10 @@ function handleTableClick(event) {
 
   if (target.dataset.action === "delete-employee") {
     deleteEmployee(target.dataset.id);
+  }
+
+  if (target.dataset.action === "edit-employee") {
+    startEditEmployee(target.dataset.id);
   }
 
   if (target.dataset.action === "delete-team") {
@@ -984,7 +1052,6 @@ function buildExportRows() {
     姓名: employee.name,
     团队: employee.team,
     团队长: getTeamProfile(employee.team).leader || "",
-    日目标: employee.dailyTarget,
     月目标: employee.monthlyTarget,
   }));
 
@@ -1015,7 +1082,7 @@ function buildExportRows() {
       N5派单: Number(metrics.daily.assigned || 0),
       N5自拓: Number(metrics.daily.selfDeveloped || 0),
       今日量: metrics.todayAmount,
-      个人日目标: employee.dailyTarget,
+      当日日目标: metrics.dailyTarget,
       完成率: percent(metrics.dailyRatio),
       当月派单总量: metrics.monthly.assigned,
       当月自拓总量: metrics.monthly.selfDeveloped,
@@ -1036,7 +1103,7 @@ function buildExportRows() {
       姓名: employee.name,
       出勤次数: metrics.attendanceCount,
       今日量: metrics.todayAmount,
-      日目标: employee.dailyTarget,
+      当日日目标: metrics.dailyTarget,
       今日完成率: percent(metrics.dailyRatio),
       月度达成: metrics.monthly.achieved,
       月度目标: employee.monthlyTarget,
@@ -1112,7 +1179,7 @@ function importData(file) {
 function resetData() {
   state = getSeedData();
   resetTeamForm();
-  els.employeeForm.reset();
+  resetEmployeeForm();
   els.dateInput.value = getToday();
   els.teamFilter.value = "";
   els.quickSearch.value = "";
